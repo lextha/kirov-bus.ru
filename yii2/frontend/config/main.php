@@ -13,12 +13,12 @@ return [
     'language' => 'ru-RU',
     'id' => 'app-frontend',
     'basePath' => dirname(__DIR__),
-   // 'bootstrap' => ['log','debug'],
+  //  'bootstrap' => ['log','debug'],
     'controllerNamespace' => 'frontend\controllers',
     'modules' => [
-       /* 'debug' => [
+      /*  'debug' => [
             'class' => 'yii\debug\Module',
-            'allowedIPs' => ['5.187.70.511']
+            'allowedIPs' => ['5.187.71.189']
         ],*/
         'sitemap' => [
             'class' => 'himiklab\sitemap\Sitemap',
@@ -29,7 +29,7 @@ return [
                 //'common\models\Station',
             ],
             'enableGzip' => false, // default is false
-            'cacheExpire' => 1, // 1 second. Default is 24 hours
+            'cacheExpire' => 250000, // 1 second. Default is 24 hours
         ]
     ],
     'components' => [

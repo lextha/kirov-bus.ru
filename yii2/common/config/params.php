@@ -6,6 +6,6 @@ return [
     'senderName' => 'Example.com mailer',
     'user.passwordResetTokenExpire' => 3600,
     'user.passwordMinLength' => 8,
-        'city_id'=>29,
-    'DateTimeZone'=>'Europe/Moscow'
+    'city_id'=>9,
+    'DateTimeZone'=>'Europe/Kirov'
 ];

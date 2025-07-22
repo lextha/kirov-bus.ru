@@ -5,9 +5,9 @@
 //error_reporting(E_ALL ^ E_NOTICE);
   error_reporting(0);
 //if ($_SERVER['REMOTE_ADDR']=='5.187.71.226' OR $_SERVER['REMOTE_ADDR']=='127.0.0.1') {
-   defined('YII_DEBUG') or define('YII_DEBUG', true);
+/*   defined('YII_DEBUG') or define('YII_DEBUG', true);
     defined('YII_ENV') or define('YII_ENV', 'dev'); 
-    ini_set('error_reporting', E_ALL);
+    ini_set('error_reporting', E_ALL);*/
    
 //}
 

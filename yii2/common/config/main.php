@@ -30,7 +30,7 @@ return [
         ),
         'db' => [
             'class' => 'yii\db\Connection',
-            'dsn' => 'mysql:host=localhost;dbname=gb071124',  //gb231123
+            'dsn' => 'mysql:host=localhost;dbname=gb011124',  //gb231123
             'username' => 'gb',
             'password' => 'fO6kM3nK3f',
             'charset' => 'utf8',

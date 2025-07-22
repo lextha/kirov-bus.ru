@@ -32,7 +32,7 @@ AppAsset::register($this);
         <div class="app">
             <?= $content ?>
             <footer class="footer">
-                <p class="footer-text">© arh-bus.ru</p>
+                <p class="footer-text">© kirov-bus.ru</p>
                 <nav>
                     <noindex><!--googleoff: all-->
                         <div style='text-align: right;margin: 20px;color:#97989d;'>
@@ -55,14 +55,14 @@ AppAsset::register($this);
    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
    (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-   ym(97004382, "init", {
+   ym(97004391, "init", {
         clickmap:true,
         trackLinks:true,
         accurateTrackBounce:true,
         webvisor:true
    });
 </script>
-<noscript><div><img src="https://mc.yandex.ru/watch/97004382" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<noscript><div><img src="https://mc.yandex.ru/watch/97004391" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
     </body>
 
