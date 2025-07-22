@@ -6,15 +6,68 @@ use yii;
 
 class FuncHelper {
 
-    private static $proxy = [
-    
-        ['194.32.240.139:3176', 'user143170:x6ymuf'],
-        ['45.88.211.71:3176', 'user143170:x6ymuf'],
-        ['194.32.240.135:3176', 'user143170:x6ymuf'],
-        ['87.247.140.87:3176', 'user143170:x6ymuf'],
-        ['212.60.6.93:3176', 'user143170:x6ymuf'],
-    ];
+    private static $proxyList = null;
 
+    /**
+     * Загружает и возвращает список прокси из внешнего .txt файла.
+     * Формат файла: user:pass:host:port (каждая прокси на новой строке).
+     * @return array Внутренний формат: [ ['host:port', 'user:pass'], ... ]
+     */
+    private static function getProxyList()
+    {
+        // Если список уже был загружен ранее, просто возвращаем его
+        if (self::$proxyList !== null) {
+            return self::$proxyList;
+
+        }
+
+        // Используем псевдоним, который вы задали в bootstrap.php
+        $proxyFile = Yii::getAlias('@sharedConfig/proxies.txt');
+
+        if (!file_exists($proxyFile)) {
+            Yii::error('Proxy configuration file not found: ' . $proxyFile, __METHOD__);
+            self::$proxyList = []; // Возвращаем пустой массив, чтобы не было ошибок
+            return self::$proxyList;
+        }
+
+        // Читаем все строки из файла в массив
+        $lines = file($proxyFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        $parsedProxies = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // Пропускаем комментарии
+            if (empty($line) || $line[0] === '#') {
+                continue;
+            }
+
+            // Разбиваем строку user:pass:host:port
+            // Этот метод надежно работает, даже если в пароле будут спецсимволы,
+            // но не двоеточия.
+            $parts = explode(':', $line);
+
+            // Проверяем, что у нас правильное количество частей (минимум 4)
+            if (count($parts) < 4) {
+                Yii::warning("Invalid proxy format in proxies.txt: {$line}", __METHOD__);
+                continue;
+            }
+
+            // Собираем части обратно в нужный нам формат
+            // [ 'host:port', 'user:pass' ]
+
+            $port = array_pop($parts); // Последний элемент - порт
+            $host = array_pop($parts); // Предпоследний - хост
+            $userPass = implode(':', $parts); // Все, что осталось - это user:pass
+
+            $hostPort = $host . ':' . $port;
+
+            $parsedProxies[] = [$hostPort, $userPass];
+        }
+
+        // Сохраняем результат в кэш и возвращаем его
+        self::$proxyList = $parsedProxies;
+        return self::$proxyList;
+    }
     static function curllocal($url, $postdata = '', $cookie = '', $proxy = '', $ref = '') { // для парсинга CarlController
 
         $flag = true;
@@ -76,13 +129,13 @@ class FuncHelper {
     }
 
     static function countproxy() {
-        return (count(self::$proxy) - 1);
+        return (count(self::getProxyList()) - 1);
     }
 
 
 
     static function curlj_new($url, $data = '', $proxy_number = -1, $city = 0) {
-        $proxya = self::$proxy;
+        $proxya = self::getProxyList();
 
         $flag = true;
         //header=false;
@@ -119,18 +172,18 @@ class FuncHelper {
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
 
 
-                $headers = array(
-                    "Content-Type: application/json",
-                    'cache-control: max-age=0',
-                    //    'upgrade-insecure-requests: 1',
-                    'sec-fetch-user: ?1',
-                    'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-                    'x-compress: null',
-                    'sec-fetch-site: none',
-                    'sec-fetch-mode: navigate',
-                    'accept-encoding: deflate, br',
-                    'accept-language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
-                );
+            $headers = array(
+                "Content-Type: application/json",
+                'cache-control: max-age=0',
+                //    'upgrade-insecure-requests: 1',
+                'sec-fetch-user: ?1',
+                'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+                'x-compress: null',
+                'sec-fetch-site: none',
+                'sec-fetch-mode: navigate',
+                'accept-encoding: deflate, br',
+                'accept-language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+            );
 
             curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
             /* if ($data=='') {
@@ -159,7 +212,7 @@ class FuncHelper {
             $errmsg = curl_error($curl);
             $header = curl_getinfo($curl);
             curl_close($curl);
-           // var_dump($errmsg); die();
+            // var_dump($errmsg); die();
             $header['errno'] = $err;
             $header['errmsg'] = $errmsg;
             $header['content'] = $content;
@@ -169,7 +222,7 @@ class FuncHelper {
               echo $proxy.PHP_EOL;
               $header['content']=false;
               } */
-             //   echo print_r($header);
+            //   echo print_r($header);
             //   var_dump($proxy,$content,$errmsg,$err); die(); 
             if ($header['content'] === FALSE || $header['http_code'] != '200') {
                 //echo $i.PHP_EOL;  
@@ -177,16 +230,16 @@ class FuncHelper {
                 // ошибка, нет остановок
 
                 $qer = "INSERT INTO `error`(`id`, `type_error`,`text`) "
-                        . "VALUES (NULL,'Ошибка CURL','proxy= " . $proxy . " | url= " . $url . "')";
+                    . "VALUES (NULL,'Ошибка CURL','proxy= " . $proxy . " | url= " . $url . "')";
                 \Yii::$app->db->createCommand($qer)->execute();
                 echo '<div style="display:none;">p e=' . $proxy . "--code=" . $header['http_code'] . '</div>' . PHP_EOL;
             } else {
                 $flag = false;
             }
         }
-          //  if ($_SERVER['REMOTE_ADDR']=='5.187.71.226') {
-       //   var_dump($header);// die();
-          //} 
+        //  if ($_SERVER['REMOTE_ADDR']=='5.187.71.226') {
+        //   var_dump($header);// die();
+        //}
         // var_dump($content); //die();
         if ($header['content'] === FALSE || $header['http_code'] != '200') {
             // echo "B; ";
@@ -227,7 +280,7 @@ class FuncHelper {
 
             $title = str_replace($replace0, $replace1, $title);
         } else {
-            
+
         }
         $title = preg_replace('/[\s]{2,}/', ' ', $title);
         // echo "---".$title;
@@ -250,7 +303,7 @@ class FuncHelper {
 
             $title = str_replace($replace0, $replace1, $title);
         } else {
-            
+
         }
         $title = preg_replace('/[\s]{2,}/', ' ', $title);
         // echo "---".$title;
@@ -273,7 +326,7 @@ class FuncHelper {
 
             $title = str_replace($replace0, $replace1, $title);
         } else {
-            
+
         }
         $title = preg_replace('/[\s]{2,}/', ' ', $title);
         // echo "---".$title;
@@ -516,24 +569,24 @@ class FuncHelper {
             return false;
         }
     }
-    
+
     /**
      * js донора
-       function i(t, e, n, i) {
-        var o = t + "~" + i + "~" + e + "~" + n,
-            a = r(o),
-            s = a.substr(0, 8) + "-" + a.substr(8, 4) + "-" + a.substr(12, 4) + "-" + a.substr(24, 4) + "-" + a.substr(28, 12);
-        return {
-            magicStr: a.substr(16, 8),
-            guidStr: s
-        }
+    function i(t, e, n, i) {
+    var o = t + "~" + i + "~" + e + "~" + n,
+    a = r(o),
+    s = a.substr(0, 8) + "-" + a.substr(8, 4) + "-" + a.substr(12, 4) + "-" + a.substr(24, 4) + "-" + a.substr(28, 12);
+    return {
+    magicStr: a.substr(16, 8),
+    guidStr: s
+    }
     }
 
     function o(t, e) {
-        var n = i(t.data.method, t.data.id, t.data.params.sid, e);
-        t.url = t.url + "?m=" + n.guidStr, t.data.params.magic = n.magicStr
+    var n = i(t.data.method, t.data.id, t.data.params.sid, e);
+    t.url = t.url + "?m=" + n.guidStr, t.data.params.magic = n.magicStr
     }
-     * 
+     *
      */
     static function mafik_old($id_num,$get,$sid) {
         $sha1n = sha1($get."-".$id_num."-".$sid);  //t.data.method, t.data.id, t.data.params.sid
@@ -559,19 +612,19 @@ class FuncHelper {
         }
         */
         //die('f5');
-        $city_id = $route->city_id; 
+        $city_id = $route->city_id;
         $fcount=0;
         $sid=false;
         while(!$sid AND $fcount<20) {
             $proxy_num = rand(0, FuncHelper::countproxy());
             $post = '{"id": 1,"jsonrpc": "2.2","method": "startSession", "ts": '.time().',"params": {}}';
             $sid = FuncHelper::curlj_new($url[0], $post, $proxy_num, $city_id);
-           //if ($_SERVER['REMOTE_ADDR']=='5.187.71.208') {
-             //   var_dump($sid); die('6757567573gf');
-           // }
+            //if ($_SERVER['REMOTE_ADDR']=='5.187.71.208') {
+            //   var_dump($sid); die('6757567573gf');
+            // }
             $id_num = 1;
             if ($sid) {
-                @$sid = json_decode($sid); 
+                @$sid = json_decode($sid);
                 @$sid = $sid->result->sid;
             }
             $fcount++;
@@ -579,28 +632,28 @@ class FuncHelper {
         if (!$sid) { die("error33456956457"); }
         $id_num = 2;
         if ($url[1]!='') {
-            $mafic= FuncHelper::mafik($id_num,"getUnits",$sid,$url[1]);    
+            $mafic= FuncHelper::mafik($id_num,"getUnits",$sid,$url[1]);
             $post_pos = '{"id":2,"jsonrpc":"2.2","method":"getUnits","params":{"sid":"' . $sid . '","marshList":["' . $route->temp_route_id . '"],"magic":"'.$mafic[1].'"},"ts":'.time().'}';
             // $post_all_marsh='{"jsonrpc": "2.0","method": "getTransTypeTree","params": {"sid": "'.$sid.'","ok_id": "'.$ok_id.'"},"id": 2}';
         } else {
-            $mafic= FuncHelper::mafik_old($id_num,"getUnits",$sid);    
+            $mafic= FuncHelper::mafik_old($id_num,"getUnits",$sid);
             $post_pos = '{"id":2,"jsonrpc":"2.0","method":"getUnits","params":{"sid":"' . $sid . '","marshList":["' . $route->temp_route_id . '"],"magic":"'.$mafic[1].'"}}';
             // $post_all_marsh='{"jsonrpc": "2.0","method": "getTransTypeTree","params": {"sid": "'.$sid.'","ok_id": "'.$ok_id.'"},"id": 2}';
-        
+
         }
         $all_marsh = FuncHelper::curlj_new($url[0]."?m=".$mafic[0], $post_pos, $proxy_num, $city_id);
- //var_dump($url."?m=".$mafic[0], $post_pos, $proxy_num, $city_id,$all_marsh); die();
-        $all_marsh = json_decode($all_marsh); 
+        //var_dump($url."?m=".$mafic[0], $post_pos, $proxy_num, $city_id,$all_marsh); die();
+        $all_marsh = json_decode($all_marsh);
         if ($all_marsh) {
             return $all_marsh;
         } else {
             return false;
         }
     }
-    
+
     static function getunit_magic($route, $u_id, $url) {
         $post = '';
-        $city_id = $route->city_id; 
+        $city_id = $route->city_id;
         $fcount=0;
         $sid=false;
         if (is_array($url)) {
@@ -612,10 +665,10 @@ class FuncHelper {
             $proxy_num = rand(0, FuncHelper::countproxy());
             $post = '{"id": 1,"jsonrpc": "2.2","method": "startSession", "ts": '.time().',"params": {}}';
             $sid = FuncHelper::curlj_new($uri, $post, $proxy_num, $city_id);
-        //   var_dump($url[0], $post, $proxy_num, $city_id);
+            //   var_dump($url[0], $post, $proxy_num, $city_id);
             $id_num = 1;
             if ($sid) {
-                @$sid = json_decode($sid); 
+                @$sid = json_decode($sid);
                 @$sid = $sid->result->sid;
             }
             $fcount++;
@@ -623,16 +676,16 @@ class FuncHelper {
         if (!$sid) { die("error11666111576"); }
         $id_num = 2;
         if (is_array($url)) {
-            $mafic= FuncHelper::mafik($id_num,"getUnitArrive",$sid,$url[1]);    
+            $mafic= FuncHelper::mafik($id_num,"getUnitArrive",$sid,$url[1]);
             $post_pos = '{"id":2,"jsonrpc":"2.2","method":"getUnitArrive","params":{"sid":"' . $sid . '","u_id":"' . $u_id . '","magic":"'.$mafic[1].'"},"ts":'.time().'}';
             // $post_all_marsh='{"jsonrpc": "2.0","method": "getTransTypeTree","params": {"sid": "'.$sid.'","ok_id": "'.$ok_id.'"},"id": 2}';
         } else {
-            $mafic= FuncHelper::mafik_old($id_num,"getUnitArrive",$sid);    
+            $mafic= FuncHelper::mafik_old($id_num,"getUnitArrive",$sid);
             $post_pos = '{"id":2,"jsonrpc":"2.0","method":"getUnitArrive","params":{"sid":"' . $sid . '","u_id":"' . $u_id . '","magic":"'.$mafic[1].'"}}';
             // $post_all_marsh='{"jsonrpc": "2.0","method": "getTransTypeTree","params": {"sid": "'.$sid.'","ok_id": "'.$ok_id.'"},"id": 2}';
         }
         $route_info = FuncHelper::curlj_new($uri."?m=".$mafic[0], $post_pos, $proxy_num, $city_id);
-        $route_info = json_decode($route_info); 
+        $route_info = json_decode($route_info);
         if ($route_info) {
             return $route_info;
         } else {
